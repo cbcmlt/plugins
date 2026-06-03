@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#E2001A" />
+    <title>Tisch-Konfigurator</title>
+    <!--
+      Eigenständige Einzeldatei-Variante des Tisch-Konfigurators.
+      Läuft OHNE Node.js, ohne Installation und ohne Internet:
+      einfach diese Datei im Browser öffnen (Doppelklick).
+      Datenklassifizierung (R_86): C0 — keine personenbezogenen Daten.
+    -->
+    <style>
+      :root {
+        --background: #f7f9fb;
+        --foreground: #0f1729;
+        --muted: #e7ebf0;
+        --muted-foreground: #5a6675;
+        --border: #d3dae3;
+        --card: #ffffff;
+        --primary: #e2001a; /* Max-Bögl-Rot */
+        --primary-foreground: #ffffff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--background);
+        color: var(--foreground);
+        font-family: system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .container {
+        max-width: 64rem;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+      }
+      header h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0;
+        letter-spacing: -0.01em;
+      }
+      header p {
+        color: var(--muted-foreground);
+        font-size: 0.875rem;
+        margin: 0.25rem 0 0;
+      }
+      .layout {
+        display: grid;
+        gap: 1.5rem;
+        margin-top: 2rem;
+      }
+      @media (min-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr 24rem;
+        }
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 2px rgba(15, 23, 41, 0.05);
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+      .feld {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .feld label {
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+      .feld .einheit {
+        color: var(--muted-foreground);
+        font-weight: 400;
+      }
+      .feld input,
+      .feld select {
+        font: inherit;
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 0.375rem;
+        background: var(--card);
+        color: inherit;
+        outline: none;
+      }
+      .feld input:focus,
+      .feld select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(226, 0, 26, 0.25);
+      }
+      .feld input[aria-invalid="true"],
+      .feld select[aria-invalid="true"] {
+        border-color: var(--primary);
+      }
+      .fehler {
+        color: var(--primary);
+        font-size: 0.75rem;
+        margin: 0;
+      }
+      .grid2 {
+        display: grid;
+        gap: 1rem;
+      }
+      @media (min-width: 480px) {
+        .grid2 {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      aside h2 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0 0 1rem;
+      }
+      .zeile {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 1rem;
+        padding: 0.25rem 0;
+      }
+      .zeile .bez {
+        font-size: 0.875rem;
+        color: var(--muted-foreground);
+      }
+      .zeile .wert {
+        font-size: 0.875rem;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+      }
+      hr {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 0.75rem 0;
+      }
+      .gesamt {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 1rem;
+      }
+      .gesamt .label {
+        font-size: 1rem;
+        font-weight: 600;
+      }
+      .gesamt .betrag {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--primary);
+        font-variant-numeric: tabular-nums;
+      }
+      .hinweis {
+        color: var(--primary);
+        font-size: 0.875rem;
+      }
+      .hidden {
+        display: none;
+      }
+      footer {
+        margin-top: 2rem;
+        color: var(--muted-foreground);
+        font-size: 0.75rem;
+      }
+      .rechts {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      .viewer-card canvas {
+        display: block;
+        width: 100%;
+        height: 320px;
+        border: 1px solid var(--border);
+        border-radius: 0.5rem;
+        background: linear-gradient(180deg, #eef2f6, #dde4ec);
+        touch-action: none;
+        cursor: grab;
+      }
+      .viewer-card canvas:active {
+        cursor: grabbing;
+      }
+      .viewer-hinweis {
+        margin: 0.5rem 0 0;
+        text-align: center;
+        color: var(--muted-foreground);
+        font-size: 0.75rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Tisch-Konfigurator</h1>
+        <p>Maße, Material, Gestell und Kante wählen — der Preis wird live berechnet.</p>
+      </header>
+
+      <div class="layout">
+        <form id="form" autocomplete="off">
+          <div class="feld">
+            <label for="in-form">Form</label>
+            <select id="in-form"></select>
+          </div>
+
+          <div id="block-rechteckig" class="grid2">
+            <div class="feld">
+              <label for="in-laenge">Länge <span class="einheit">(mm)</span></label>
+              <input id="in-laenge" type="number" inputmode="numeric" step="1" />
+              <p class="fehler hidden" id="err-laengeMm"></p>
+            </div>
+            <div class="feld">
+              <label for="in-breite">Breite <span class="einheit">(mm)</span></label>
+              <input id="in-breite" type="number" inputmode="numeric" step="1" />
+              <p class="fehler hidden" id="err-breiteMm"></p>
+            </div>
+          </div>
+
+          <div id="block-rund" class="feld hidden">
+            <label for="in-durchmesser">Durchmesser <span class="einheit">(mm)</span></label>
+            <input id="in-durchmesser" type="number" inputmode="numeric" step="1" />
+            <p class="fehler hidden" id="err-durchmesserMm"></p>
+          </div>
+
+          <div class="feld">
+            <label for="in-hoehe">Höhe <span class="einheit">(mm)</span></label>
+            <input id="in-hoehe" type="number" inputmode="numeric" step="1" />
+            <p class="fehler hidden" id="err-hoeheMm"></p>
+          </div>
+
+          <div class="feld">
+            <label for="in-beinmass">
+              Beinmaß <span class="einheit">(mm — Kantenlänge bzw. Durchmesser der Beine)</span>
+            </label>
+            <input id="in-beinmass" type="number" inputmode="numeric" step="1" />
+            <p class="fehler hidden" id="err-beinMassMm"></p>
+          </div>
+
+          <div id="block-beinoffset" class="feld hidden">
+            <label for="in-beinoffset">
+              Bein-Offset von der Kante <span class="einheit">(mm)</span>
+            </label>
+            <input id="in-beinoffset" type="number" inputmode="numeric" step="1" />
+            <p class="fehler hidden" id="err-beinOffsetMm"></p>
+          </div>
+
+          <div class="feld">
+            <label for="in-material">Material</label>
+            <select id="in-material"></select>
+            <p class="fehler hidden" id="err-materialId"></p>
+          </div>
+
+          <div class="feld">
+            <label for="in-gestell">Gestell</label>
+            <select id="in-gestell"></select>
+            <p class="fehler hidden" id="err-gestellId"></p>
+          </div>
+
+          <div class="feld">
+            <label for="in-kante">Kantenbearbeitung</label>
+            <select id="in-kante"></select>
+            <p class="fehler hidden" id="err-kanteId"></p>
+          </div>
+        </form>
+
+        <div class="rechts">
+          <section class="card viewer-card">
+            <h2>3D-Vorschau</h2>
+            <canvas id="viewer" width="320" height="320"></canvas>
+            <p class="viewer-hinweis">Ziehen zum Drehen · Mausrad zum Zoomen</p>
+          </section>
+
+          <aside class="card">
+          <h2>Zusammenfassung</h2>
+          <div>
+            <div class="zeile"><span class="bez">Form</span><span class="wert" id="z-form"></span></div>
+            <div class="zeile"><span class="bez">Maße</span><span class="wert" id="z-masse"></span></div>
+            <div class="zeile"><span class="bez">Höhe</span><span class="wert" id="z-hoehe"></span></div>
+            <div class="zeile"><span class="bez">Material</span><span class="wert" id="z-material"></span></div>
+            <div class="zeile"><span class="bez">Gestell</span><span class="wert" id="z-gestell"></span></div>
+            <div class="zeile"><span class="bez">Kante</span><span class="wert" id="z-kante"></span></div>
+          </div>
+          <hr />
+          <div id="preis-block">
+            <div class="zeile"><span class="bez">Plattenfläche</span><span class="wert" id="z-flaeche"></span></div>
+            <div class="zeile"><span class="bez">Umfang</span><span class="wert" id="z-umfang"></span></div>
+            <div class="zeile"><span class="bez">Material</span><span class="wert" id="z-k-material"></span></div>
+            <div class="zeile"><span class="bez">Kantenbearbeitung</span><span class="wert" id="z-k-kante"></span></div>
+            <div class="zeile"><span class="bez">Gestell</span><span class="wert" id="z-k-gestell"></span></div>
+            <hr />
+            <div class="gesamt"><span class="label">Gesamt (netto)</span><span class="betrag" id="z-gesamt"></span></div>
+          </div>
+          <p class="hinweis hidden" id="preis-fehler">
+            Bitte korrigieren Sie die markierten Eingaben, um einen Preis zu erhalten.
+          </p>
+          </aside>
+        </div>
+      </div>
+
+      <footer>
+        Alle Preise netto, zzgl. USt. Unverbindliche Kalkulation. Datenklassifizierung: C0.
+      </footer>
+    </div>
+
+    <script>
+      // ----- Stammdaten (Whitelist, sichere Defaults) ------------------------
+      const MATERIALIEN = [
+        { id: "eiche", label: "Eiche massiv", preisProQm: 320 },
+        { id: "buche", label: "Buche massiv", preisProQm: 240 },
+        { id: "mdf-weiss", label: "MDF weiß lackiert", preisProQm: 130 },
+        { id: "linoleum", label: "Linoleum auf Trägerplatte", preisProQm: 160 },
+      ];
+      const GESTELLE = [
+        { id: "vier-bein-holz", label: "Vier Beine, Holz", aufpreis: 0 },
+        { id: "vier-bein-stahl", label: "Vier Beine, Stahl pulverbeschichtet", aufpreis: 90 },
+        { id: "wange-stahl", label: "Stahlwange (U-Form)", aufpreis: 180 },
+        { id: "hoehenverstellbar", label: "Höhenverstellbares Elektro-Gestell", aufpreis: 540 },
+      ];
+      const KANTEN = [
+        { id: "gerade", label: "Gerade Kante", preisProMeter: 0 },
+        { id: "gefast", label: "Gefaste Kante", preisProMeter: 12 },
+        { id: "abgerundet", label: "Abgerundete Kante", preisProMeter: 18 },
+      ];
+      const GRENZEN = {
+        laengeMm: { minMm: 600, maxMm: 3000 },
+        breiteMm: { minMm: 400, maxMm: 1200 },
+        durchmesserMm: { minMm: 600, maxMm: 1600 },
+        hoeheMm: { minMm: 600, maxMm: 1200 },
+        beinMassMm: { minMm: 30, maxMm: 150 },
+        beinOffsetMm: { minMm: 0, maxMm: 800 },
+      };
+      const FORM_OPTIONEN = [
+        { id: "rechteckig", label: "Rechteckig" },
+        { id: "rund", label: "Rund" },
+      ];
+
+      const findeMaterial = (id) => MATERIALIEN.find((m) => m.id === id);
+      const findeGestell = (id) => GESTELLE.find((g) => g.id === id);
+      const findeKante = (id) => KANTEN.find((k) => k.id === id);
+
+      // ----- Geometrie -------------------------------------------------------
+      const QM_PRO_QMM = 1000000;
+      const MM_PRO_M = 1000;
+      const rundeEuro = (b) => Math.round(b * 100) / 100;
+
+      function flaecheQm(k) {
+        if (k.form === "rund") {
+          const r = k.durchmesserMm / 2;
+          return (Math.PI * r * r) / QM_PRO_QMM;
+        }
+        return (k.laengeMm * k.breiteMm) / QM_PRO_QMM;
+      }
+      function umfangM(k) {
+        if (k.form === "rund") return (Math.PI * k.durchmesserMm) / MM_PRO_M;
+        return (2 * (k.laengeMm + k.breiteMm)) / MM_PRO_M;
+      }
+
+      // ----- Validierung (Typ, Ganzzahligkeit, Wertebereich, Whitelist) ------
+      function validiere(k) {
+        const fehler = [];
+        const pruefeMass = (feld, wert, grenze) => {
+          if (!Number.isFinite(wert)) {
+            fehler.push({ feld, meldung: "Bitte eine gültige Zahl eingeben." });
+            return;
+          }
+          if (!Number.isInteger(wert)) {
+            fehler.push({ feld, meldung: "Maße müssen ganzzahlige Millimeter sein." });
+            return;
+          }
+          if (wert < grenze.minMm || wert > grenze.maxMm) {
+            fehler.push({ feld, meldung: `Zulässig sind ${grenze.minMm}–${grenze.maxMm} mm.` });
+          }
+        };
+
+        pruefeMass("hoeheMm", k.hoeheMm, GRENZEN.hoeheMm);
+        pruefeMass("beinMassMm", k.beinMassMm, GRENZEN.beinMassMm);
+        if (k.form === "rund") {
+          pruefeMass("durchmesserMm", k.durchmesserMm, GRENZEN.durchmesserMm);
+          pruefeMass("beinOffsetMm", k.beinOffsetMm, GRENZEN.beinOffsetMm);
+          // Geometrie-Plausibilität: Beine müssen auf die Platte passen.
+          if (
+            Number.isFinite(k.durchmesserMm) &&
+            Number.isFinite(k.beinOffsetMm) &&
+            Number.isFinite(k.beinMassMm) &&
+            k.beinOffsetMm + k.beinMassMm > k.durchmesserMm / 2
+          ) {
+            fehler.push({ feld: "beinOffsetMm", meldung: "Beine passen nicht auf die Platte." });
+          }
+        } else {
+          pruefeMass("laengeMm", k.laengeMm, GRENZEN.laengeMm);
+          pruefeMass("breiteMm", k.breiteMm, GRENZEN.breiteMm);
+        }
+        if (!findeMaterial(k.materialId)) fehler.push({ feld: "materialId", meldung: "Unbekanntes Material." });
+        if (!findeGestell(k.gestellId)) fehler.push({ feld: "gestellId", meldung: "Unbekanntes Gestell." });
+        if (!findeKante(k.kanteId)) fehler.push({ feld: "kanteId", meldung: "Unbekannte Kantenbearbeitung." });
+        return fehler;
+      }
+
+      // ----- Preisberechnung (Fail-Secure) -----------------------------------
+      function berechnePreis(k) {
+        if (validiere(k).length > 0) {
+          throw new Error("Konfiguration ist ungültig.");
+        }
+        const material = findeMaterial(k.materialId);
+        const gestell = findeGestell(k.gestellId);
+        const kante = findeKante(k.kanteId);
+        const flaeche = flaecheQm(k);
+        const umfang = umfangM(k);
+        const materialKosten = rundeEuro(flaeche * material.preisProQm);
+        const kantenKosten = rundeEuro(umfang * kante.preisProMeter);
+        const gestellKosten = rundeEuro(gestell.aufpreis);
+        return {
+          flaecheQm: Math.round(flaeche * 1000) / 1000,
+          umfangM: Math.round(umfang * 1000) / 1000,
+          materialKosten,
+          kantenKosten,
+          gestellKosten,
+          gesamtNetto: rundeEuro(materialKosten + kantenKosten + gestellKosten),
+        };
+      }
+
+      const eur = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });
+      const formatiereEuro = (b) => eur.format(b);
+      const formatiereZahl = (n) => n.toLocaleString("de-DE");
+
+      // ----- DOM-Verdrahtung -------------------------------------------------
+      const $ = (id) => document.getElementById(id);
+
+      // Selects befüllen (Optionen sicher via textContent).
+      function fuelleSelect(el, optionen) {
+        for (const opt of optionen) {
+          const o = document.createElement("option");
+          o.value = opt.id;
+          o.textContent = opt.label;
+          el.appendChild(o);
+        }
+      }
+      fuelleSelect($("in-form"), FORM_OPTIONEN);
+      fuelleSelect($("in-material"), MATERIALIEN);
+      fuelleSelect($("in-gestell"), GESTELLE);
+      fuelleSelect($("in-kante"), KANTEN);
+
+      // Standardkonfiguration setzen.
+      $("in-form").value = "rechteckig";
+      $("in-laenge").value = "1600";
+      $("in-breite").value = "800";
+      $("in-durchmesser").value = "1000";
+      $("in-hoehe").value = "740";
+      $("in-material").value = "eiche";
+      $("in-gestell").value = "vier-bein-holz";
+      $("in-kante").value = "gerade";
+      $("in-beinmass").value = "60";
+      $("in-beinoffset").value = "60";
+
+      function leseKonfiguration() {
+        return {
+          form: $("in-form").value,
+          laengeMm: $("in-laenge").valueAsNumber,
+          breiteMm: $("in-breite").valueAsNumber,
+          durchmesserMm: $("in-durchmesser").valueAsNumber,
+          hoeheMm: $("in-hoehe").valueAsNumber,
+          beinMassMm: $("in-beinmass").valueAsNumber,
+          beinOffsetMm: $("in-beinoffset").valueAsNumber,
+          materialId: $("in-material").value,
+          gestellId: $("in-gestell").value,
+          kanteId: $("in-kante").value,
+        };
+      }
+
+      // Zuordnung Feld -> Eingabe-Element-ID für aria-invalid.
+      const EINGABE_ID = {
+        laengeMm: "in-laenge",
+        breiteMm: "in-breite",
+        durchmesserMm: "in-durchmesser",
+        hoeheMm: "in-hoehe",
+        beinMassMm: "in-beinmass",
+        beinOffsetMm: "in-beinoffset",
+        materialId: "in-material",
+        gestellId: "in-gestell",
+        kanteId: "in-kante",
+      };
+
+      function render() {
+        const k = leseKonfiguration();
+
+        // Form-abhängige Felder ein-/ausblenden.
+        const istRund = k.form === "rund";
+        $("block-rechteckig").classList.toggle("hidden", istRund);
+        $("block-rund").classList.toggle("hidden", !istRund);
+        $("block-beinoffset").classList.toggle("hidden", !istRund);
+
+        // Fehler zurücksetzen.
+        const alleFelder = ["laengeMm", "breiteMm", "durchmesserMm", "hoeheMm", "beinMassMm", "beinOffsetMm", "materialId", "gestellId", "kanteId"];
+        const fehlerMap = {};
+        for (const f of validiere(k)) {
+          if (!(f.feld in fehlerMap)) fehlerMap[f.feld] = f.meldung;
+        }
+        for (const feld of alleFelder) {
+          const meldung = fehlerMap[feld];
+          const p = $("err-" + feld);
+          if (p) {
+            p.textContent = meldung || "";
+            p.classList.toggle("hidden", !meldung);
+          }
+          const eing = $(EINGABE_ID[feld]);
+          if (eing) {
+            if (meldung) eing.setAttribute("aria-invalid", "true");
+            else eing.removeAttribute("aria-invalid");
+          }
+        }
+
+        // Zusammenfassung (Stammdaten) füllen.
+        const material = findeMaterial(k.materialId);
+        const gestell = findeGestell(k.gestellId);
+        const kante = findeKante(k.kanteId);
+        $("z-form").textContent = istRund ? "Rund" : "Rechteckig";
+        $("z-masse").textContent = istRund
+          ? "Ø " + k.durchmesserMm + " mm"
+          : k.laengeMm + " × " + k.breiteMm + " mm";
+        $("z-hoehe").textContent = k.hoeheMm + " mm";
+        $("z-material").textContent = material ? material.label : "—";
+        $("z-gestell").textContent = gestell ? gestell.label : "—";
+        $("z-kante").textContent = kante ? kante.label : "—";
+
+        // Preis nur bei gültiger Konfiguration (Fail-Secure).
+        const gueltig = Object.keys(fehlerMap).length === 0;
+        $("preis-block").classList.toggle("hidden", !gueltig);
+        $("preis-fehler").classList.toggle("hidden", gueltig);
+        if (gueltig) {
+          const p = berechnePreis(k);
+          $("z-flaeche").textContent = formatiereZahl(p.flaecheQm) + " m²";
+          $("z-umfang").textContent = formatiereZahl(p.umfangM) + " m";
+          $("z-k-material").textContent = formatiereEuro(p.materialKosten);
+          $("z-k-kante").textContent = formatiereEuro(p.kantenKosten);
+          $("z-k-gestell").textContent = formatiereEuro(p.gestellKosten);
+          $("z-gesamt").textContent = formatiereEuro(p.gesamtNetto);
+        }
+
+        // 3D-Vorschau nur bei gültiger Geometrie zeichnen (Fail-Secure).
+        if (gueltig) {
+          aktuelleKonfig = k;
+          zeichne3D(k);
+        } else {
+          aktuelleKonfig = null;
+          leereCanvas();
+        }
+      }
+
+      // ===== 3D-Software-Renderer (Canvas 2D, abhängigkeitsfrei, offline) =====
+      const canvas = $("viewer");
+      const ctx = canvas.getContext("2d");
+      const PLATTEN_DICKE = 30; // mm
+      const BEIN_FARBE = "#6b7280"; // Gestell (neutrales Grau)
+      const MATERIAL_FARBE = {
+        eiche: "#c8a06a",
+        buche: "#d8b487",
+        "mdf-weiss": "#eef0f2",
+        linoleum: "#7d8a72",
+      };
+      const farbeFuer = (id) => MATERIAL_FARBE[id] || "#c8a06a";
+
+      // Ansichtszustand (per Maus veränderbar).
+      let yaw = -0.6;
+      let pitch = 0.5;
+      let zoom = 1;
+      let aktuelleKonfig = null;
+
+      // --- Vektor-Helfer ---
+      function normiere(v) {
+        const l = Math.hypot(v.x, v.y, v.z) || 1;
+        return { x: v.x / l, y: v.y / l, z: v.z / l };
+      }
+      function flaechenNormale(pts) {
+        const a = pts[0], b = pts[1], c = pts[2];
+        const ux = b.x - a.x, uy = b.y - a.y, uz = b.z - a.z;
+        const vx = c.x - a.x, vy = c.y - a.y, vz = c.z - a.z;
+        return normiere({ x: uy * vz - uz * vy, y: uz * vx - ux * vz, z: ux * vy - uy * vx });
+      }
+      function mischeHelligkeit(hex, faktor) {
+        const c = hex.replace("#", "");
+        const r = parseInt(c.substring(0, 2), 16);
+        const g = parseInt(c.substring(2, 4), 16);
+        const b = parseInt(c.substring(4, 6), 16);
+        const cl = (v) => Math.max(0, Math.min(255, Math.round(v * faktor)));
+        return "rgb(" + cl(r) + ", " + cl(g) + ", " + cl(b) + ")";
+      }
+
+      // --- Geometrie -> Flächenliste ({ farbe, punkte:[{x,y,z}, ...] }) ---
+      function quaderFaces(cx, cy, cz, bx, by, bz, farbe) {
+        const x0 = cx - bx / 2, x1 = cx + bx / 2;
+        const y0 = cy, y1 = cy + by;
+        const z0 = cz - bz / 2, z1 = cz + bz / 2;
+        const p = (x, y, z) => ({ x, y, z });
+        return [
+          { farbe, punkte: [p(x0, y1, z0), p(x1, y1, z0), p(x1, y1, z1), p(x0, y1, z1)] }, // oben
+          { farbe, punkte: [p(x0, y0, z1), p(x1, y0, z1), p(x1, y0, z0), p(x0, y0, z0)] }, // unten
+          { farbe, punkte: [p(x0, y0, z1), p(x0, y1, z1), p(x1, y1, z1), p(x1, y0, z1)] }, // +z
+          { farbe, punkte: [p(x1, y0, z0), p(x1, y1, z0), p(x0, y1, z0), p(x0, y0, z0)] }, // -z
+          { farbe, punkte: [p(x1, y0, z1), p(x1, y1, z1), p(x1, y1, z0), p(x1, y0, z0)] }, // +x
+          { farbe, punkte: [p(x0, y0, z0), p(x0, y1, z0), p(x0, y1, z1), p(x0, y0, z1)] }, // -x
+        ];
+      }
+      function zylinderFaces(cx, cz, radius, y0, y1, segmente, farbe) {
+        const faces = [];
+        const top = [], bot = [];
+        for (let i = 0; i < segmente; i++) {
+          const a0 = (i / segmente) * Math.PI * 2;
+          const a1 = ((i + 1) / segmente) * Math.PI * 2;
+          const x0 = cx + Math.cos(a0) * radius, z0 = cz + Math.sin(a0) * radius;
+          const x1 = cx + Math.cos(a1) * radius, z1 = cz + Math.sin(a1) * radius;
+          faces.push({
+            farbe,
+            punkte: [
+              { x: x0, y: y0, z: z0 },
+              { x: x0, y: y1, z: z0 },
+              { x: x1, y: y1, z: z1 },
+              { x: x1, y: y0, z: z1 },
+            ],
+          });
+          top.push({ x: x0, y: y1, z: z0 });
+          bot.push({ x: x0, y: y0, z: z0 });
+        }
+        faces.push({ farbe, punkte: top });
+        faces.push({ farbe, punkte: bot.slice().reverse() });
+        return faces;
+      }
+
+      // Baut den gesamten Tisch (Platte + 4 Beine) aus Flächen.
+      function baueModell(k) {
+        const faces = [];
+        const holz = farbeFuer(k.materialId);
+        const beinHoehe = Math.max(k.hoeheMm - PLATTEN_DICKE, 10);
+
+        if (k.form === "rund") {
+          const r = k.durchmesserMm / 2;
+          faces.push(...zylinderFaces(0, 0, r, beinHoehe, k.hoeheMm, 48, holz));
+          const beinR = k.beinMassMm / 2;
+          const kreisR = Math.max(r - k.beinOffsetMm - beinR, beinR);
+          for (let i = 0; i < 4; i++) {
+            const a = Math.PI / 4 + (i / 4) * Math.PI * 2; // um 45° versetzt
+            const bx = Math.cos(a) * kreisR;
+            const bz = Math.sin(a) * kreisR;
+            faces.push(...zylinderFaces(bx, bz, beinR, 0, beinHoehe, 16, BEIN_FARBE));
+          }
+        } else {
+          const bx = k.breiteMm, bz = k.laengeMm;
+          faces.push(...quaderFaces(0, beinHoehe, 0, bx, PLATTEN_DICKE, bz, holz));
+          const s = k.beinMassMm;
+          const offX = bx / 2 - s / 2;
+          const offZ = bz / 2 - s / 2;
+          for (const sx of [-1, 1]) {
+            for (const sz of [-1, 1]) {
+              faces.push(...quaderFaces(sx * offX, 0, sz * offZ, s, beinHoehe, s, BEIN_FARBE));
+            }
+          }
+        }
+        return faces;
+      }
+
+      // Rotation: erst Gier (Y-Achse), dann Nicken (X-Achse).
+      function rotiere(p) {
+        const cy = Math.cos(yaw), sy = Math.sin(yaw);
+        const x = p.x * cy - p.z * sy;
+        const z1 = p.x * sy + p.z * cy;
+        const cx = Math.cos(pitch), sx = Math.sin(pitch);
+        const y = p.y * cx - z1 * sx;
+        const z = p.y * sx + z1 * cx;
+        return { x, y, z };
+      }
+
+      function passeCanvasAn() {
+        const dpr = window.devicePixelRatio || 1;
+        const breite = canvas.clientWidth || 320;
+        const hoehe = canvas.clientHeight || 320;
+        canvas.width = Math.round(breite * dpr);
+        canvas.height = Math.round(hoehe * dpr);
+      }
+
+      function leereCanvas() {
+        passeCanvasAn();
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+
+      function zeichne3D(k) {
+        passeCanvasAn();
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        // Modell um den Mittelpunkt (Höhe/2) zentrieren und rotieren.
+        const cyModell = k.hoeheMm / 2;
+        const rotFaces = baueModell(k).map((f) => ({
+          farbe: f.farbe,
+          rp: f.punkte.map((p) => rotiere({ x: p.x, y: p.y - cyModell, z: p.z })),
+        }));
+
+        // Auto-Fit der Bounding-Box.
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        for (const f of rotFaces) {
+          for (const p of f.rp) {
+            if (p.x < minX) minX = p.x;
+            if (p.x > maxX) maxX = p.x;
+            if (p.y < minY) minY = p.y;
+            if (p.y > maxY) maxY = p.y;
+          }
+        }
+        const spanX = maxX - minX || 1;
+        const spanY = maxY - minY || 1;
+        const midX = (minX + maxX) / 2;
+        const midY = (minY + maxY) / 2;
+        const skala = Math.min(W / spanX, H / spanY) * 0.82 * zoom;
+        const dist = Math.max(spanX, spanY) * 2.4;
+
+        const projiziere = (p) => {
+          const persp = dist / (dist - p.z);
+          return {
+            x: W / 2 + (p.x - midX) * skala * persp,
+            y: H / 2 - (p.y - midY) * skala * persp,
+          };
+        };
+
+        // Painter's Algorithm: hinten (kleines z) zuerst zeichnen.
+        const sortiert = rotFaces
+          .map((f) => ({ f, tiefe: f.rp.reduce((s, p) => s + p.z, 0) / f.rp.length }))
+          .sort((a, b) => a.tiefe - b.tiefe);
+
+        const licht = normiere({ x: -0.4, y: 0.85, z: 0.5 });
+        ctx.lineJoin = "round";
+        for (const { f } of sortiert) {
+          const n = flaechenNormale(f.rp);
+          // Betrag des Skalarprodukts -> wicklungsunabhängige, ruhige Schattierung.
+          const intensitaet = 0.55 + 0.45 * Math.abs(n.x * licht.x + n.y * licht.y + n.z * licht.z);
+          const sp = f.rp.map(projiziere);
+          ctx.beginPath();
+          ctx.moveTo(sp[0].x, sp[0].y);
+          for (let i = 1; i < sp.length; i++) ctx.lineTo(sp[i].x, sp[i].y);
+          ctx.closePath();
+          ctx.fillStyle = mischeHelligkeit(f.farbe, intensitaet);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(15, 23, 41, 0.18)";
+          ctx.lineWidth = window.devicePixelRatio || 1;
+          ctx.stroke();
+        }
+      }
+
+      // --- Maus-Interaktion: Drehen & Zoomen ---
+      let ziehen = false, letzteX = 0, letzteY = 0;
+      canvas.addEventListener("pointerdown", (e) => {
+        ziehen = true;
+        letzteX = e.clientX;
+        letzteY = e.clientY;
+        canvas.setPointerCapture(e.pointerId);
+      });
+      canvas.addEventListener("pointermove", (e) => {
+        if (!ziehen) return;
+        yaw += (e.clientX - letzteX) * 0.01;
+        pitch += (e.clientY - letzteY) * 0.01;
+        pitch = Math.max(-1.4, Math.min(1.4, pitch));
+        letzteX = e.clientX;
+        letzteY = e.clientY;
+        if (aktuelleKonfig) zeichne3D(aktuelleKonfig);
+      });
+      canvas.addEventListener("pointerup", () => {
+        ziehen = false;
+      });
+      canvas.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          zoom *= e.deltaY < 0 ? 1.1 : 0.9;
+          zoom = Math.max(0.3, Math.min(4, zoom));
+          if (aktuelleKonfig) zeichne3D(aktuelleKonfig);
+        },
+        { passive: false },
+      );
+      window.addEventListener("resize", () => {
+        if (aktuelleKonfig) zeichne3D(aktuelleKonfig);
+      });
+
+      $("form").addEventListener("input", render);
+      $("form").addEventListener("change", render);
+      render();
+    </script>
+  </body>
+</html>

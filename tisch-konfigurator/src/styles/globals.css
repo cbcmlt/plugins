@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Farb-Token (HSL-Tripel ohne hsl()-Wrapper, damit Tailwind <alpha-value> nutzen kann). */
+:root {
+  --background: 210 20% 98%;
+  --foreground: 222 47% 11%;
+  --muted: 210 16% 93%;
+  --muted-foreground: 215 16% 40%;
+  --border: 214 20% 85%;
+  --card: 0 0% 100%;
+  --primary: 353 100% 44%; /* Max-Bögl-Rot #E2001A */
+  --primary-foreground: 0 0% 100%;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+  }
+}
