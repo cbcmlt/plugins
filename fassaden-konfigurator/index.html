@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Facade + Overhang Solar Configurator</title>
+<!--
+  Single-file glass-facade / overhang solar configurator.
+  Data classification (R_86): C0 — public climate data only, no personal data.
+  Comparative / early-design tool: isotropic-diffuse model, no inter-reflections.
+  NOT a substitute for a certified simulator (Radiance / EnergyPlus).
+-->
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #ffffff;
+    --panel2: #fafbfc;
+    --border: #dfe3e8;
+    --text: #1a1d21;
+    --muted: #6b7280;
+    --accent: #E2001A;  /* Max-Bögl red */
+    --good: #E2001A;    /* Headline-KPI nutzt das Markenrot (Weiß/Rot-Schema) */
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font: 13px/1.45 system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    overflow: hidden;
+  }
+  #panel {
+    width: 320px;
+    min-width: 320px;
+    height: 100%;
+    overflow-y: auto;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 14px 14px 40px;
+  }
+  #stage { position: relative; flex: 1; height: 100%; }
+  canvas { display: block; }
+  h1 { font-size: 15px; margin: 0 0 2px; }
+  .sub { color: var(--muted); font-size: 11px; margin-bottom: 12px; }
+  fieldset {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 0 0 12px;
+    padding: 10px 12px 12px;
+    background: var(--panel2);
+  }
+  legend { padding: 0 6px; color: var(--accent); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  label { display: block; margin: 8px 0 2px; color: var(--muted); font-size: 11px; }
+  .row { display: flex; align-items: center; gap: 8px; }
+  input[type=range] { flex: 1; accent-color: var(--accent); }
+  .val { width: 56px; text-align: right; font-variant-numeric: tabular-nums; color: var(--text); }
+  .seg { display: flex; gap: 4px; margin-top: 4px; }
+  .seg button {
+    flex: 1; padding: 6px 0; border: 1px solid var(--border); background: transparent;
+    color: var(--muted); border-radius: 6px; cursor: pointer; font-size: 12px;
+  }
+  .seg button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #drop {
+    border: 1.5px dashed var(--border); border-radius: 8px; padding: 12px; text-align: center;
+    color: var(--muted); cursor: pointer; font-size: 12px;
+  }
+  #drop.hover { border-color: var(--accent); color: var(--text); }
+  #drop b { color: var(--text); }
+  .kpi { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #e6e9ed; }
+  .kpi:last-child { border-bottom: 0; }
+  .kpi .k { color: var(--muted); }
+  .kpi .v { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .big { color: var(--good); }
+  #legend {
+    position: absolute; right: 12px; bottom: 12px; background: rgba(255,255,255,.92);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 11px;
+  }
+  #legend .bar { height: 10px; width: 160px; border-radius: 3px; margin: 4px 0;
+    background: linear-gradient(90deg,#0a1a99,#0aa0e6,#19cc33,#ffd900,#e61a00); }
+  #legend .ends { display: flex; justify-content: space-between; color: var(--muted); }
+  #datasrc { position: absolute; left: 12px; top: 12px; background: rgba(255,255,255,.92);
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 11px; color: var(--muted); max-width: 60%; }
+  #datasrc b { color: var(--text); }
+  #resetView {
+    position: absolute; right: 12px; top: 12px; z-index: 5;
+    background: rgba(255,255,255,.92); border: 1px solid var(--accent); color: var(--accent);
+    border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  #resetView:hover { background: var(--accent); color: #fff; }
+  .note { color: var(--muted); font-size: 10.5px; margin-top: 4px; }
+  a { color: #6db3ff; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="panel">
+  <h1>Facade + Overhang Solar Configurator</h1>
+  <div class="sub">Incident solar load on glass · live shadow · EPW-driven</div>
+
+  <fieldset>
+    <legend>Weather data</legend>
+    <div id="drop">Drop an <b>.epw</b> file here, or click to choose.<br>
+      <span class="note">Until then: clear-sky estimate at Ingolstadt.</span>
+    </div>
+    <input id="file" type="file" accept=".epw" hidden />
+  </fieldset>
+
+  <fieldset>
+    <legend>Glass</legend>
+    <label>Width <span class="val" id="gwV"></span> m</label>
+    <div class="row"><input id="gw" type="range" min="0.5" max="12" step="0.1"></div>
+    <label>Height <span class="val" id="ghV"></span> m</label>
+    <div class="row"><input id="gh" type="range" min="0.5" max="8" step="0.1"></div>
+    <label>Tilt from horizontal <span class="val" id="tiltV"></span>°</label>
+    <div class="row"><input id="tilt" type="range" min="30" max="90" step="1"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Orientation (rotate assembly)</legend>
+    <label>Facing azimuth <span class="val" id="azV"></span></label>
+    <div class="row"><input id="az" type="range" min="0" max="360" step="1"></div>
+    <div class="note">0°=N · 90°=E · 180°=S · 270°=W. Spins glass + overhang about the vertical axis; sun stays fixed.</div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Overhang (shading device)</legend>
+    <label>Depth (projection) <span class="val" id="odV"></span> m</label>
+    <div class="row"><input id="od" type="range" min="0" max="4" step="0.05"></div>
+    <label>Height above glass <span class="val" id="ohV"></span> m</label>
+    <div class="row"><input id="oh" type="range" min="0" max="2" step="0.05"></div>
+    <label>Thickness <span class="val" id="otV"></span> m</label>
+    <div class="row"><input id="ot" type="range" min="0.02" max="0.5" step="0.01"></div>
+    <label>Side extension (each) <span class="val" id="osV"></span> m</label>
+    <div class="row"><input id="os" type="range" min="0" max="2" step="0.05"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Time</legend>
+    <label>Day of year <span class="val" id="doyV"></span></label>
+    <div class="row"><input id="doy" type="range" min="1" max="365" step="1"></div>
+    <label>Hour <span class="val" id="hrV"></span></label>
+    <div class="row"><input id="hr" type="range" min="1" max="24" step="1"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Heatmap resolution</legend>
+    <div class="seg" id="resSeg">
+      <button data-res="low" class="active">Low</button>
+      <button data-res="med">Medium</button>
+      <button data-res="high">High</button>
+    </div>
+    <div class="note" id="resNote"></div>
+  </fieldset>
+
+  <fieldset>
+    <legend>Results (incident on glass)</legend>
+    <div class="kpi"><span class="k">Sun altitude</span><span class="v" id="rAlt">–</span></div>
+    <div class="kpi"><span class="k">Sun azimuth</span><span class="v" id="rAz">–</span></div>
+    <div class="kpi"><span class="k">Mean — with overhang</span><span class="v big" id="rWith">–</span></div>
+    <div class="kpi"><span class="k">Mean — no overhang</span><span class="v" id="rWithout">–</span></div>
+    <div class="kpi"><span class="k">Reduction by overhang</span><span class="v" id="rRed">–</span></div>
+    <div class="kpi"><span class="k">Sunlit area</span><span class="v" id="rSun">–</span></div>
+    <div class="kpi"><span class="k">Outside air temp</span><span class="v" id="rTemp">–</span></div>
+    <div class="note">Comparative tool — isotropic diffuse, no inter-reflections. Not a certified simulator.</div>
+  </fieldset>
+</div>
+
+<div id="stage">
+  <div id="datasrc"></div>
+  <button id="resetView">Reset view</button>
+  <div id="legend"><div>Incident W/m²</div><div class="bar"></div><div class="ends"><span>0</span><span id="legMax">–</span></div></div>
+</div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ----------------------------------------------------------------------------
+// Constants & helpers
+// ----------------------------------------------------------------------------
+const RAD = Math.PI / 180;
+const ALBEDO = 0.2; // ground reflectance
+const RES = { low: { c: 8, r: 6 }, med: { c: 16, r: 12 }, high: { c: 32, r: 24 } };
+const MONTHS = [31,28,31,30,31,30,31,31,30,31,30,31];
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+
+// Default location (used for the clear-sky estimate before an EPW is loaded).
+const DEFAULT_LOC = { city: 'Ingolstadt (default)', region: 'BY', country: 'DEU', wmo: '108600', lat: 48.711, lon: 11.536, tz: 1, elev: 366 };
+
+function doyToDate(n) {
+  let d = clamp(Math.round(n), 1, 365), m = 0;
+  while (d > MONTHS[m]) { d -= MONTHS[m]; m++; }
+  return { month: m + 1, day: d };
+}
+const MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ----------------------------------------------------------------------------
+// Solar position — standard declination + equation-of-time model.
+// Pure function of latitude/longitude/timezone, day-of-year and clock hour.
+// ----------------------------------------------------------------------------
+function solarPosition(lat, lon, tz, n, hour) {
+  const B = RAD * (360 / 365) * (n - 81);
+  const decl = 23.45 * Math.sin(B);                                  // declination, deg
+  const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B); // minutes
+  const lstm = 15 * tz;                                              // standard meridian, deg
+  const tc = 4 * (lon - lstm) + eot;                                 // time correction, minutes
+  const lst = hour + tc / 60;                                        // local solar time, h
+  const H = 15 * (lst - 12);                                         // hour angle, deg
+  const sinAlt = Math.sin(lat * RAD) * Math.sin(decl * RAD)
+               + Math.cos(lat * RAD) * Math.cos(decl * RAD) * Math.cos(H * RAD);
+  const alt = Math.asin(clamp(sinAlt, -1, 1)) / RAD;
+  const cosAlt = Math.cos(Math.asin(clamp(sinAlt, -1, 1)));
+  let az = 90;
+  if (cosAlt > 1e-6) {
+    let c = (Math.sin(decl * RAD) * Math.cos(lat * RAD)
+           - Math.cos(decl * RAD) * Math.sin(lat * RAD) * Math.cos(H * RAD)) / cosAlt;
+    az = Math.acos(clamp(c, -1, 1)) / RAD;          // from North
+    if (H > 0) az = 360 - az;                        // afternoon → west of south
+  }
+  return { alt, az };
+}
+
+// ----------------------------------------------------------------------------
+// Solar load on the glass — POA irradiance + analytic single-overhang shading.
+// Returns mean values plus a per-cell grid for the heatmap. Varies vertically
+// (single infinitely-wide horizontal overhang → no horizontal variation).
+// ----------------------------------------------------------------------------
+function solarLoad(p) {
+  const { alt, az, facadeAz, tiltDeg, dni, dhi, ghi, glassH, overhangDepth, overhangAboveGlass, cols, rows } = p;
+  const beta = tiltDeg * RAD;
+  const cosAoiRaw = Math.sin(alt * RAD) * Math.cos(beta)
+                  + Math.cos(alt * RAD) * Math.sin(beta) * Math.cos((az - facadeAz) * RAD);
+  const cosAoi = Math.max(0, cosAoiRaw);
+  const sunUp = alt > 0;
+  const cosDiff = Math.cos((az - facadeAz) * RAD); // sun in front of facade?
+
+  const diffuseFull = dhi * (1 + Math.cos(beta)) / 2;
+  const groundRefl = ghi * ALBEDO * (1 - Math.cos(beta)) / 2;
+  const directFull = (sunUp && cosAoi > 0) ? dni * cosAoi : 0;
+
+  // Vertical shadow drop below the overhang attachment line.
+  let shadowDrop = 0;
+  if (sunUp && cosDiff > 0 && overhangDepth > 0) {
+    shadowDrop = overhangDepth * Math.tan(alt * RAD) / cosDiff;
+  }
+
+  const cells = [];
+  let sumWith = 0, sunlitCells = 0, maxVal = 0;
+  for (let row = 0; row < rows; row++) {
+    const f = (row + 0.5) / rows;                       // 0 = top of glass
+    const v = overhangAboveGlass + f * glassH;          // distance below overhang line
+    const sunlit = directFull > 0 && v > shadowDrop;
+    const direct = sunlit ? directFull : 0;
+    // Diffuse sky-view reduction: elevation angle to overhang outer edge.
+    const diffuseFactor = overhangDepth > 0 ? clamp(Math.atan2(v, overhangDepth) / (Math.PI / 2), 0, 1) : 1;
+    const diffuse = diffuseFull * diffuseFactor;
+    const total = direct + diffuse + groundRefl;
+    if (sunlit) sunlitCells++;
+    if (total > maxVal) maxVal = total;
+    for (let col = 0; col < cols; col++) {
+      cells.push({ col, row, f, total, sunlit });
+      sumWith += total;
+    }
+  }
+  const n = cols * rows;
+  const meanWith = n ? sumWith / n : 0;
+  const meanWithout = directFull + diffuseFull + groundRefl;
+  const reduction = meanWithout > 1e-6 ? (meanWithout - meanWith) / meanWithout * 100 : 0;
+  return {
+    cells, cols, rows, maxVal: Math.max(maxVal, meanWithout, 1),
+    meanWith, meanWithout, reduction,
+    sunlitFraction: rows ? sunlitCells / rows : 0,
+    alt, az, cosAoi,
+  };
+}
+
+// ----------------------------------------------------------------------------
+// EPW parsing — fail-secure: returns null on malformed input (no partial data).
+// ----------------------------------------------------------------------------
+function parseEpw(text) {
+  try {
+    const lines = text.split(/\r?\n/);
+    if (lines.length < 12) return null;
+    const loc = lines[0].split(',');
+    if ((loc[0] || '').trim().toUpperCase() !== 'LOCATION' || loc.length < 10) return null;
+    const lat = parseFloat(loc[6]), lon = parseFloat(loc[7]), tz = parseFloat(loc[8]), elev = parseFloat(loc[9]);
+    if (![lat, lon, tz, elev].every(Number.isFinite)) return null;
+    const station = { city: (loc[1] || '').trim(), region: (loc[2] || '').trim(), country: (loc[3] || '').trim(), wmo: (loc[5] || '').trim(), lat, lon, tz, elev };
+    const byKey = new Map();
+    let count = 0;
+    for (let i = 8; i < lines.length; i++) {
+      const ln = lines[i].trim();
+      if (!ln) continue;
+      const fld = ln.split(',');
+      if (fld.length < 35) continue;
+      const month = +fld[1], day = +fld[2], hour = +fld[3];
+      const drybulb = +fld[6], ghi = +fld[13], dni = +fld[14], dhi = +fld[15], wdir = +fld[20], wspd = +fld[21];
+      if (![month, day, hour, ghi, dni, dhi].every(Number.isFinite)) continue;
+      byKey.set(`${month}_${day}_${hour}`, { month, day, hour, drybulb, ghi, dni, dhi, wdir, wspd });
+      count++;
+    }
+    if (count < 24) return null;
+    return { station, byKey };
+  } catch (e) {
+    return null;
+  }
+}
+
+// Clear-sky fallback when no EPW is loaded (clearly labelled in the UI).
+function clearSky(alt) {
+  if (alt <= 0) return { dni: 0, dhi: 0, ghi: 0, drybulb: NaN };
+  const dni = 900 * (0.6 + 0.4 * Math.sin(alt * RAD));
+  const dhi = 90;
+  return { dni, dhi, ghi: dni * Math.sin(alt * RAD) + dhi, drybulb: NaN };
+}
+
+// ----------------------------------------------------------------------------
+// State
+// ----------------------------------------------------------------------------
+const state = {
+  loc: DEFAULT_LOC, epw: null,
+  glassW: 3, glassH: 2.5, tilt: 90, az: 180,
+  od: 1.0, oh: 0.3, ot: 0.15, os: 0.3,
+  doy: 172, hr: 13, res: 'low',
+};
+
+// ----------------------------------------------------------------------------
+// Three.js scene
+// ----------------------------------------------------------------------------
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf2f4f6);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 500);
+const CAM0 = new THREE.Vector3(6, 4.5, 9);       // Standard-Blickpunkt (für „Reset view")
+const TARGET0 = new THREE.Vector3(0, 1.5, 0);
+camera.position.copy(CAM0);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.copy(TARGET0);
+controls.enableDamping = true;
+
+const hemi = new THREE.HemisphereLight(0xffffff, 0xdfe3e8, 0.5);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff4e0, 1.6);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 0.5; sun.shadow.camera.far = 120;
+sun.shadow.camera.left = -12; sun.shadow.camera.right = 12;
+sun.shadow.camera.top = 14; sun.shadow.camera.bottom = -2;
+sun.shadow.bias = -0.0004;
+scene.add(sun);
+scene.add(sun.target);
+const sunBall = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 16), new THREE.MeshBasicMaterial({ color: 0xffd86b }));
+scene.add(sunBall);
+
+// Ground
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(40, 64),
+  new THREE.MeshStandardMaterial({ color: 0xdfe3e8, roughness: 1 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+scene.add(new THREE.PolarGridHelper(14, 8, 8, 64, 0xc2c9d0, 0xd9dee3));
+
+// North marker (fixed in world; -Z = North)
+const northArrow = new THREE.ArrowHelper(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 0.02, 0), 4, 0xE2001A, 0.8, 0.4);
+scene.add(northArrow);
+scene.add(makeLabel('N', 0, 0.3, -4.6));
+scene.add(makeLabel('S', 0, 0.3, 4.6));
+scene.add(makeLabel('E', 4.6, 0.3, 0));
+scene.add(makeLabel('W', -4.6, 0.3, 0));
+
+function makeLabel(txt, x, y, z) {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = '#1a1d21'; g.font = 'bold 40px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(txt, 32, 34);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true }));
+  sp.position.set(x, y, z); sp.scale.set(0.8, 0.8, 0.8);
+  return sp;
+}
+
+// Assembly group (glass + overhang + wall) — rotated about the vertical axis.
+const assembly = new THREE.Group();
+scene.add(assembly);
+
+const wall = new THREE.Mesh(
+  new THREE.PlaneGeometry(1, 1),
+  new THREE.MeshStandardMaterial({ color: 0xd2d8de, roughness: 0.9, side: THREE.DoubleSide })
+);
+wall.receiveShadow = true;
+assembly.add(wall);
+
+let glass = null; // rebuilt on geometry/resolution change
+const overhang = new THREE.Mesh(
+  new THREE.BoxGeometry(1, 1, 1),
+  new THREE.MeshStandardMaterial({ color: 0xcdd6df, roughness: 0.7, metalness: 0.1 })
+);
+overhang.castShadow = true;
+overhang.receiveShadow = true;
+assembly.add(overhang);
+
+// Bemaßung (rotiert/neigt sich mit der Baugruppe). Wird bei jedem update() neu aufgebaut.
+const dimensions = new THREE.Group();
+assembly.add(dimensions);
+
+// Kleines Maßzahl-Label (dunkler Text auf hellem Grund, immer zur Kamera gerichtet).
+function makeDimLabel(txt) {
+  const c = document.createElement('canvas'); c.width = 160; c.height = 48;
+  const g = c.getContext('2d');
+  g.fillStyle = 'rgba(255,255,255,0.88)'; g.fillRect(0, 0, 160, 48);
+  g.fillStyle = '#1a1d21'; g.font = 'bold 28px system-ui'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(txt, 80, 26);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false }));
+  sp.scale.set(0.78, 0.23, 1);
+  sp.renderOrder = 999;
+  return sp;
+}
+
+// Maßlinie p1→p2 mit Endmarkierungen (off) und Maßzahl. Markenrot.
+function makeDimension(p1, p2, text, off) {
+  const grp = new THREE.Group();
+  const mat = new THREE.LineBasicMaterial({ color: 0xE2001A });
+  const a = new THREE.Vector3().fromArray(p1), b = new THREE.Vector3().fromArray(p2);
+  const o = new THREE.Vector3().fromArray(off);
+  grp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, b]), mat));
+  [a, b].forEach((pt) => {
+    grp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([pt.clone(), pt.clone().add(o)]), mat));
+  });
+  const lbl = makeDimLabel(text);
+  lbl.position.copy(a).add(b).multiplyScalar(0.5).add(o);
+  grp.add(lbl);
+  return grp;
+}
+
+// Alte Maßelemente verwerfen (Geometrie + Sprite-Texturen freigeben).
+function clearDimensions() {
+  dimensions.children.slice().forEach((child) => {
+    dimensions.remove(child);
+    child.traverse((o) => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); }
+    });
+  });
+}
+
+// Gesamtmaße aufbauen: Glas Breite×Höhe, Verschattung Breite×Tiefe (ohne Dicken).
+function rebuildDimensions() {
+  clearDimensions();
+  const W = state.glassW, H = state.glassH;
+  // Glas-Breite — vor der Scheibe, an der Unterkante.
+  dimensions.add(makeDimension([-W / 2, 0.02, 0.3], [W / 2, 0.02, 0.3], `${W.toFixed(2)} m`, [0, 0, 0.18]));
+  // Glas-Höhe — seitlich neben der Scheibe.
+  dimensions.add(makeDimension([-W / 2 - 0.05, 0, 0.3], [-W / 2 - 0.05, H, 0.3], `${H.toFixed(2)} m`, [-0.18, 0, 0]));
+  if (state.od > 0) {
+    const ow = W + 2 * state.os;
+    const yTop = H + state.oh + state.ot;
+    // Verschattung-Breite — Vorderkante der Auskragung, darüber.
+    dimensions.add(makeDimension([-ow / 2, yTop + 0.05, state.od], [ow / 2, yTop + 0.05, state.od], `${ow.toFixed(2)} m`, [0, 0.16, 0]));
+    // Verschattung-Tiefe — seitlich, von Wand (z=0) bis Vorderkante (z=Tiefe).
+    dimensions.add(makeDimension([ow / 2 + 0.05, yTop - state.ot / 2, 0], [ow / 2 + 0.05, yTop - state.ot / 2, state.od], `${state.od.toFixed(2)} m`, [0.16, 0, 0]));
+  }
+}
+
+// Heatmap colour ramp (blue → cyan → green → yellow → red).
+const STOPS = [[0,0.04,0.6],[0.04,0.63,0.9],[0.1,0.8,0.2],[1,0.85,0],[0.9,0.1,0]];
+function heat(t) {
+  t = clamp(t, 0, 1) * (STOPS.length - 1);
+  const i = Math.floor(t), f = t - i;
+  const a = STOPS[i], b = STOPS[Math.min(i + 1, STOPS.length - 1)];
+  return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
+}
+
+// ----------------------------------------------------------------------------
+// Build / update
+// ----------------------------------------------------------------------------
+function rebuildGlass(result) {
+  if (glass) { assembly.remove(glass); glass.geometry.dispose(); glass.material.dispose(); }
+  const { glassW: W } = state, H = state.glassH;
+  const geo = new THREE.PlaneGeometry(W, H, result.cols, result.rows);
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  // Per-cell value depends only on the row (vertical position).
+  const valByRow = new Array(result.rows + 1);
+  for (let row = 0; row <= result.rows; row++) {
+    const f = clamp(row / result.rows, 0, 1);
+    const cell = result.cells.find(c => c.row === Math.min(row, result.rows - 1));
+    valByRow[row] = cell ? cell.total : 0;
+  }
+  for (let i = 0; i < pos.count; i++) {
+    const y = pos.getY(i);                 // local: [-H/2, H/2]
+    const fTop = clamp((H / 2 - y) / H, 0, 1);
+    const row = clamp(Math.round(fTop * result.rows), 0, result.rows);
+    const [r, g, b] = heat(valByRow[row] / result.maxVal);
+    colors[i * 3] = r; colors[i * 3 + 1] = g; colors[i * 3 + 2] = b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  glass = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.DoubleSide }));
+  glass.position.set(0, H / 2, 0.01);
+  assembly.add(glass);
+}
+
+function update() {
+  // Sun.
+  const { lat, lon, tz } = state.loc;
+  const sp = solarPosition(lat, lon, tz, state.doy, state.hr - 0.5);
+
+  // Irradiance: from EPW if loaded, else clear-sky estimate.
+  const { month, day } = doyToDate(state.doy);
+  let irr, srcText, temp = NaN;
+  if (state.epw) {
+    const rec = state.epw.byKey.get(`${month}_${day}_${state.hr}`);
+    if (rec) { irr = { dni: rec.dni, dhi: rec.dhi, ghi: rec.ghi }; temp = rec.drybulb; }
+    else irr = { dni: 0, dhi: 0, ghi: 0 };
+    srcText = `<b>${state.loc.city}</b>, ${state.loc.region} ${state.loc.country} · ${state.loc.lat.toFixed(3)}°, ${state.loc.lon.toFixed(3)}° · ${state.loc.elev} m<br>EPW · ${MN[month-1]} ${day}, ${String(state.hr).padStart(2,'0')}:00`;
+  } else {
+    irr = clearSky(sp.alt);
+    srcText = `<b>${state.loc.city}</b> · ${state.loc.lat.toFixed(3)}°, ${state.loc.lon.toFixed(3)}°<br>Clear-sky estimate (no EPW loaded) · ${MN[month-1]} ${day}, ${String(state.hr).padStart(2,'0')}:00`;
+  }
+
+  const grid = RES[state.res];
+  const result = solarLoad({
+    alt: sp.alt, az: sp.az, facadeAz: state.az, tiltDeg: state.tilt,
+    dni: irr.dni, dhi: irr.dhi, ghi: irr.ghi,
+    glassH: state.glassH, overhangDepth: state.od, overhangAboveGlass: state.oh,
+    cols: grid.c, rows: grid.r,
+  });
+
+  // 3D geometry.
+  const W = state.glassW, H = state.glassH;
+  assembly.rotation.y = (180 - state.az) * RAD;     // face the chosen azimuth
+  assembly.rotation.x = (90 - state.tilt) * RAD;    // tilt about the sill (approx visual)
+
+  wall.geometry.dispose();
+  wall.geometry = new THREE.PlaneGeometry(W + 2 * state.os + 0.4, H + state.oh + 0.4);
+  wall.position.set(0, (H + state.oh + 0.4) / 2 - 0.2, 0);
+
+  overhang.geometry.dispose();
+  overhang.geometry = new THREE.BoxGeometry(W + 2 * state.os, state.ot, Math.max(state.od, 0.001));
+  overhang.position.set(0, H + state.oh + state.ot / 2, state.od / 2);
+  overhang.visible = state.od > 0;
+
+  rebuildGlass(result);
+  rebuildDimensions();
+
+  // Sun light placement (world space — independent of assembly rotation).
+  const dir = new THREE.Vector3(
+    Math.cos(sp.alt * RAD) * Math.sin(sp.az * RAD),
+    Math.sin(sp.alt * RAD),
+    -Math.cos(sp.alt * RAD) * Math.cos(sp.az * RAD)
+  );
+  const up = sp.alt > 0;
+  sun.position.copy(dir).multiplyScalar(30).add(new THREE.Vector3(0, 0, 0));
+  sun.target.position.set(0, H / 2, 0);
+  sun.intensity = up ? 1.6 : 0.0;
+  sunBall.visible = up;
+  sunBall.position.copy(dir).multiplyScalar(18).setY(Math.max(dir.y * 18, 0.5));
+  hemi.intensity = up ? 0.45 : 0.12;
+
+  // Readout.
+  set('rAlt', `${sp.alt.toFixed(1)}°`);
+  set('rAz', `${sp.az.toFixed(0)}°`);
+  set('rWith', `${result.meanWith.toFixed(0)} W/m²`);
+  set('rWithout', `${result.meanWithout.toFixed(0)} W/m²`);
+  set('rRed', `${result.reduction.toFixed(0)} %`);
+  set('rSun', `${(result.sunlitFraction * 100).toFixed(0)} %`);
+  set('rTemp', Number.isFinite(temp) ? `${temp.toFixed(1)} °C` : '–');
+  document.getElementById('datasrc').innerHTML = srcText;
+  document.getElementById('legMax').textContent = result.maxVal.toFixed(0);
+}
+
+const set = (id, v) => { document.getElementById(id).textContent = v; };
+
+// ----------------------------------------------------------------------------
+// UI wiring
+// ----------------------------------------------------------------------------
+const bind = (id, key, fmt) => {
+  const el = document.getElementById(id), out = document.getElementById(id + 'V');
+  el.value = state[key];
+  const show = () => { if (out) out.textContent = fmt ? fmt(state[key]) : state[key]; };
+  el.addEventListener('input', () => { state[key] = parseFloat(el.value); show(); update(); });
+  show();
+};
+bind('gw', 'glassW', v => v.toFixed(1));
+bind('gh', 'glassH', v => v.toFixed(1));
+bind('tilt', 'tilt', v => v.toFixed(0));
+bind('az', 'az', v => `${v.toFixed(0)}° (${['N','NE','E','SE','S','SW','W','NW'][Math.round(v/45)%8]})`);
+bind('od', 'od', v => v.toFixed(2));
+bind('oh', 'oh', v => v.toFixed(2));
+bind('ot', 'ot', v => v.toFixed(2));
+bind('os', 'os', v => v.toFixed(2));
+bind('doy', 'doy', v => { const d = doyToDate(v); return `${MN[d.month-1]} ${d.day}`; });
+bind('hr', 'hr', v => `${String(v).padStart(2,'0')}:00`);
+
+document.querySelectorAll('#resSeg button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#resSeg button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.res = btn.dataset.res;
+    const g = RES[state.res];
+    document.getElementById('resNote').textContent = `${g.c} × ${g.r} = ${g.c*g.r} sample points`;
+    update();
+  });
+});
+document.getElementById('resNote').textContent = `${RES.low.c} × ${RES.low.r} = ${RES.low.c*RES.low.r} sample points`;
+
+// EPW load (drag-drop + click).
+const drop = document.getElementById('drop'), fileInput = document.getElementById('file');
+drop.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadEpw(e.target.files[0]); });
+['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('hover'); }));
+['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('hover'); }));
+drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) loadEpw(f); });
+
+function loadEpw(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    const parsed = parseEpw(String(reader.result));
+    if (!parsed) { drop.innerHTML = '<b style="color:#ff6b6b">Could not parse this .epw file.</b><br><span class="note">Check it is a valid EnergyPlus Weather file.</span>'; return; }
+    state.epw = parsed; state.loc = parsed.station;
+    drop.innerHTML = `Loaded: <b>${parsed.station.city}</b><br><span class="note">Drop another .epw to replace.</span>`;
+    update();
+  };
+  reader.readAsText(file);
+}
+
+// Reset-view button — Kamera/Orbit auf den Standard-Blickpunkt zurücksetzen.
+document.getElementById('resetView').addEventListener('click', () => {
+  camera.position.copy(CAM0);
+  controls.target.copy(TARGET0);
+  controls.update();
+});
+
+// Resize + render loop.
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+update();
+
+// Beispiel-EPW automatisch laden, wenn über http(s) bereitgestellt (z. B. GitHub Pages).
+// Auf file:// schlägt fetch i. d. R. fehl → stiller Rückfall auf die Klarhimmel-Schätzung.
+(async () => {
+  try {
+    const res = await fetch('beispiel/DEU_BY_Ingolstadt.Manching.AF.108600_TMYx.epw');
+    if (!res.ok) return;
+    const parsed = parseEpw(await res.text());
+    if (!parsed) return;
+    state.epw = parsed; state.loc = parsed.station;
+    drop.innerHTML = `Loaded (bundled example): <b>${parsed.station.city}</b><br><span class="note">Drop another .epw to replace.</span>`;
+    update();
+  } catch (e) {
+    /* file:// oder offline → die Klarhimmel-Schätzung bleibt aktiv */
+  }
+})();
+
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>
