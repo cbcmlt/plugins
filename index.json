@@ -2,11 +2,11 @@
   {
     "slug": "demo-python",
     "name": "Demo Python",
-    "description": "Projekt Übersicht Demo — Python (Pyodide, läuft im Browser)",
-    "url": "https://cbcmlt.github.io/demo-python/",
+    "description": "Projekt Übersicht Demo — Python (Streamlit, serverbasiert)",
+    "url": "https://demo-python.streamlit.app/",
     "repo": "cbcmlt/demo-python",
     "tech": "python",
-    "hosting": "static",
+    "hosting": "server",
     "category": "Prototypen",
     "roles": [
       "entwickler"
