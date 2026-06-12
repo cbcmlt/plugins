@@ -1,5 +1,56 @@
 [
   {
+    "slug": "demo-blazor-server",
+    "name": "Demo Blazor Server",
+    "description": "Projekt Übersicht Demo — Blazor Server (.NET, serverbasiert)",
+    "url": "https://demo-blazor-server.azurewebsites.net/",
+    "repo": "cbcmlt/demo-blazor-server",
+    "tech": "blazor",
+    "hosting": "server",
+    "category": "Prototypen",
+    "roles": [
+      "entwickler"
+    ],
+    "version": "1.0.0",
+    "dataClassification": "C1",
+    "maintainer": "Dev-PuD@max-boegl.de",
+    "iconEmoji": "🟣"
+  },
+  {
+    "slug": "demo-blazor-wasm",
+    "name": "Demo Blazor WASM",
+    "description": "Projekt Übersicht Demo — Blazor WebAssembly (.NET)",
+    "url": "https://cbcmlt.github.io/demo-blazor-wasm/",
+    "repo": "cbcmlt/demo-blazor-wasm",
+    "tech": "blazor",
+    "hosting": "static",
+    "category": "Prototypen",
+    "roles": [
+      "entwickler"
+    ],
+    "version": "1.0.0",
+    "dataClassification": "C1",
+    "maintainer": "Dev-PuD@max-boegl.de",
+    "iconEmoji": "🟣"
+  },
+  {
+    "slug": "demo-html",
+    "name": "Demo HTML",
+    "description": "Projekt Übersicht Demo — reines HTML/CSS/JS",
+    "url": "https://cbcmlt.github.io/demo-html/",
+    "repo": "cbcmlt/demo-html",
+    "tech": "html",
+    "hosting": "static",
+    "category": "Prototypen",
+    "roles": [
+      "entwickler"
+    ],
+    "version": "1.0.0",
+    "dataClassification": "C1",
+    "maintainer": "Dev-PuD@max-boegl.de",
+    "iconEmoji": "📄"
+  },
+  {
     "slug": "demo-python",
     "name": "Demo Python",
     "description": "Projekt Übersicht Demo — Python (Streamlit, serverbasiert)",
