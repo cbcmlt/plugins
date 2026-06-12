@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://cbcmlt.github.io/plugins/plugin.schema.json",
+  "title": "MB Toolbox Plugin",
+  "description": "Vertrag für eine plugin.json im Registry-Repo der MB Planungs-Toolbox.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["name", "description", "url", "tech"],
+  "properties": {
+    "name":        { "type": "string", "minLength": 1 },
+    "description": { "type": "string" },
+    "url": {
+      "type": "string",
+      "pattern": "^https://",
+      "description": "Wo die App erreichbar ist (Pages oder Server). Nur https. Wird beim Klick geöffnet."
+    },
+    "repo": {
+      "type": "string",
+      "pattern": "^[^/]+/[^/]+$",
+      "description": "Quell-Repo als owner/name (für Version/Changelog)."
+    },
+    "tech": {
+      "type": "string",
+      "enum": ["javascript", "html", "python", "blazor", "react", "node", "docker", "yaml", "unknown"],
+      "description": "Tech-Typ → Badge."
+    },
+    "hosting": {
+      "type": "string",
+      "enum": ["static", "server"],
+      "description": "static = GitHub/interne Pages; server = interner Host/Container/PaaS."
+    },
+    "category":    { "type": "string" },
+    "roles": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Sichtbarkeit; leer/fehlend = für alle."
+    },
+    "version":     { "type": "string" },
+    "dataClassification": {
+      "type": "string",
+      "enum": ["C0", "C1", "C2", "C3"],
+      "description": "R_86-Klassifizierung; personenbezogene Daten >= C2."
+    },
+    "maintainer":  { "type": "string" },
+    "iconEmoji":   { "type": "string" }
+  }
+}

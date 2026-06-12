@@ -1,0 +1,67 @@
+name: Build plugin index
+
+# Baut bei jeder Änderung an einer plugin.json (oder dem Schema) automatisch das
+# aggregierte index.json, das die Toolbox als EINE Datei liest (kein API-Aufruf,
+# kein Rate-Limit). Validiert vorher jede plugin.json gegen plugin.schema.json.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "*/plugin.json"
+      - "plugin.schema.json"
+      - ".github/workflows/build-index.yml"
+
+# index.json wird zurück committet -> Schreibrechte nötig
+permissions:
+  contents: write
+
+concurrency:
+  group: build-index
+  cancel-in-progress: false
+
+jobs:
+  build-index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: plugin.json gegen Schema validieren
+        run: |
+          npm install -g ajv-cli@5 ajv-formats@2
+          fail=0
+          for f in */plugin.json; do
+            echo "::group::Validiere $f"
+            if ! ajv validate -s plugin.schema.json -d "$f" --strict=false -c ajv-formats; then
+              echo "::error file=$f::plugin.json entspricht nicht plugin.schema.json"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $fail
+
+      - name: index.json bauen
+        run: |
+          # Jede plugin.json um ihren Ordner-Slug ergänzen und zu einem nach Name
+          # sortierten Array zusammenführen.
+          jq -s 'sort_by(.name)' \
+            $(for f in */plugin.json; do
+                slug=$(dirname "$f")
+                jq --arg slug "$slug" '{slug: $slug} + .' "$f" > "$slug.entry.json"
+                echo "$slug.entry.json"
+              done) > index.json
+          rm -f *.entry.json
+          echo "=== index.json ==="
+          cat index.json
+
+      - name: index.json committen (falls geändert)
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- index.json; then
+            echo "index.json unverändert — kein Commit."
+          else
+            git add index.json
+            git commit -m "chore: index.json automatisch aktualisiert [skip ci]"
+            git push
+          fi
