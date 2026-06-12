@@ -1,0 +1,14 @@
+{
+  "name": "Demo Blazor WASM",
+  "description": "Projekt Übersicht Demo — Blazor WebAssembly (.NET)",
+  "url": "https://cbcmlt.github.io/demo-blazor-wasm/",
+  "repo": "cbcmlt/demo-blazor-wasm",
+  "tech": "blazor",
+  "hosting": "static",
+  "category": "Prototypen",
+  "roles": ["entwickler"],
+  "version": "1.0.0",
+  "dataClassification": "C1",
+  "maintainer": "Dev-PuD@max-boegl.de",
+  "iconEmoji": "🟣"
+}

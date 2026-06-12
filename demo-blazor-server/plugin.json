@@ -1,0 +1,14 @@
+{
+  "name": "Demo Blazor Server",
+  "description": "Projekt Übersicht Demo — Blazor Server (.NET, serverbasiert)",
+  "url": "https://demo-blazor-server.azurewebsites.net/",
+  "repo": "cbcmlt/demo-blazor-server",
+  "tech": "blazor",
+  "hosting": "server",
+  "category": "Prototypen",
+  "roles": ["entwickler"],
+  "version": "1.0.0",
+  "dataClassification": "C1",
+  "maintainer": "Dev-PuD@max-boegl.de",
+  "iconEmoji": "🟣"
+}

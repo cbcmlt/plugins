@@ -1,0 +1,14 @@
+{
+  "name": "Demo HTML",
+  "description": "Projekt Übersicht Demo — reines HTML/CSS/JS",
+  "url": "https://cbcmlt.github.io/demo-html/",
+  "repo": "cbcmlt/demo-html",
+  "tech": "html",
+  "hosting": "static",
+  "category": "Prototypen",
+  "roles": ["entwickler"],
+  "version": "1.0.0",
+  "dataClassification": "C1",
+  "maintainer": "Dev-PuD@max-boegl.de",
+  "iconEmoji": "📄"
+}
