@@ -5,6 +5,7 @@
   "repo": "cbcmlt/tisch-konfigurator",
   "category": "Konfiguration",
   "tech": "javascript",
+  "hosting": "static",
   "roles": ["planer", "entwickler"],
   "dataClassification": "C1",
   "maintainer": "chrisborgc@gmail.com",

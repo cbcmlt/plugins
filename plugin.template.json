@@ -1,0 +1,14 @@
+{
+  "name": "Mein Tool",
+  "description": "Kurzbeschreibung des Tools",
+  "url": "https://cbcmlt.github.io/mein-tool/",
+  "repo": "cbcmlt/mein-tool",
+  "tech": "javascript",
+  "hosting": "static",
+  "category": "Diverse Tools",
+  "roles": ["entwickler"],
+  "version": "1.0.0",
+  "dataClassification": "C1",
+  "maintainer": "Dev-PuD@max-boegl.de",
+  "iconEmoji": "🔧"
+}
