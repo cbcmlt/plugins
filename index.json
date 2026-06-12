@@ -1,53 +1,53 @@
 [
-    {
-        "slug":  "fassaden-konfigurator",
-        "name":  "Fassaden Konfigurator",
-        "description":  "Konfiguration von Fassadenelementen",
-        "url":  "https://cbcmlt.github.io/fassaden-konfigurator/",
-        "repo":  "cbcmlt/fassaden-konfigurator",
-        "category":  "Konfiguration",
-        "tech":  "javascript",
-        "hosting":  "static",
-        "roles":  [
-                      "planer",
-                      "entwickler"
-                  ],
-        "dataClassification":  "C1",
-        "maintainer":  "chrisborgc@gmail.com",
-        "iconEmoji":  "🏗️"
-    },
-    {
-        "slug":  "modell-viewer",
-        "name":  "Modell Viewer (STL)",
-        "description":  "3D-Ansicht für STL-Dateien",
-        "url":  "https://cbcmlt.github.io/modell-viewer/",
-        "repo":  "cbcmlt/modell-viewer",
-        "category":  "Analyse",
-        "tech":  "javascript",
-        "hosting":  "static",
-        "roles":  [
-                      "planer",
-                      "entwickler"
-                  ],
-        "dataClassification":  "C1",
-        "maintainer":  "chrisborgc@gmail.com",
-        "iconEmoji":  "🧊"
-    },
-    {
-        "slug":  "tisch-konfigurator",
-        "name":  "Tisch Konfigurator",
-        "description":  "Konfiguration von Tischelementen",
-        "url":  "https://cbcmlt.github.io/tisch-konfigurator/",
-        "repo":  "cbcmlt/tisch-konfigurator",
-        "category":  "Konfiguration",
-        "tech":  "javascript",
-        "hosting":  "static",
-        "roles":  [
-                      "planer",
-                      "entwickler"
-                  ],
-        "dataClassification":  "C1",
-        "maintainer":  "chrisborgc@gmail.com",
-        "iconEmoji":  "🪑"
-    }
+  {
+    "slug": "fassaden-konfigurator",
+    "name": "Fassaden Konfigurator",
+    "description": "Konfiguration von Fassadenelementen",
+    "url": "https://cbcmlt.github.io/fassaden-konfigurator/",
+    "repo": "cbcmlt/fassaden-konfigurator",
+    "category": "Konfiguration",
+    "tech": "javascript",
+    "hosting": "static",
+    "roles": [
+      "planer",
+      "entwickler"
+    ],
+    "dataClassification": "C1",
+    "maintainer": "chrisborgc@gmail.com",
+    "iconEmoji": "🏗️"
+  },
+  {
+    "slug": "modell-viewer",
+    "name": "Modell Viewer (STL)",
+    "description": "3D-Ansicht für STL-Dateien",
+    "url": "https://cbcmlt.github.io/modell-viewer/",
+    "repo": "cbcmlt/modell-viewer",
+    "category": "Analyse",
+    "tech": "javascript",
+    "hosting": "static",
+    "roles": [
+      "planer",
+      "entwickler"
+    ],
+    "dataClassification": "C1",
+    "maintainer": "chrisborgc@gmail.com",
+    "iconEmoji": "🧊"
+  },
+  {
+    "slug": "tisch-konfigurator",
+    "name": "Tisch Konfigurator",
+    "description": "Konfiguration von Tischelementen",
+    "url": "https://cbcmlt.github.io/tisch-konfigurator/",
+    "repo": "cbcmlt/tisch-konfigurator",
+    "category": "Konfiguration",
+    "tech": "javascript",
+    "hosting": "static",
+    "roles": [
+      "planer",
+      "entwickler"
+    ],
+    "dataClassification": "C1",
+    "maintainer": "chrisborgc@gmail.com",
+    "iconEmoji": "🪑"
+  }
 ]
