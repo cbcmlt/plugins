@@ -1,0 +1,14 @@
+{
+  "name": "Demo React",
+  "description": "Projekt Übersicht Demo — React",
+  "url": "https://cbcmlt.github.io/demo-react/",
+  "repo": "cbcmlt/demo-react",
+  "tech": "react",
+  "hosting": "static",
+  "category": "Prototypen",
+  "roles": ["entwickler"],
+  "version": "1.0.0",
+  "dataClassification": "C1",
+  "maintainer": "Dev-PuD@max-boegl.de",
+  "iconEmoji": "⚛️"
+}

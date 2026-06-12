@@ -1,0 +1,14 @@
+{
+  "name": "Demo Python",
+  "description": "Projekt Übersicht Demo — Python (Pyodide, läuft im Browser)",
+  "url": "https://cbcmlt.github.io/demo-python/",
+  "repo": "cbcmlt/demo-python",
+  "tech": "python",
+  "hosting": "static",
+  "category": "Prototypen",
+  "roles": ["entwickler"],
+  "version": "1.0.0",
+  "dataClassification": "C1",
+  "maintainer": "Dev-PuD@max-boegl.de",
+  "iconEmoji": "🐍"
+}
