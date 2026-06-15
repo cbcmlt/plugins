@@ -7,7 +7,7 @@
     "repo": "cbcmlt/demo-blazor-server",
     "tech": "blazor",
     "hosting": "server",
-    "category": "Prototypen",
+    "category": "Diverse Tools",
     "roles": [
       "entwickler"
     ],
@@ -24,7 +24,7 @@
     "repo": "cbcmlt/demo-blazor-wasm",
     "tech": "blazor",
     "hosting": "static",
-    "category": "Prototypen",
+    "category": "Diverse Tools",
     "roles": [
       "entwickler"
     ],
@@ -41,7 +41,7 @@
     "repo": "cbcmlt/demo-html",
     "tech": "html",
     "hosting": "static",
-    "category": "Prototypen",
+    "category": "Diverse Tools",
     "roles": [
       "entwickler"
     ],
@@ -58,7 +58,7 @@
     "repo": "cbcmlt/demo-python",
     "tech": "python",
     "hosting": "server",
-    "category": "Prototypen",
+    "category": "Diverse Tools",
     "roles": [
       "entwickler"
     ],
@@ -75,7 +75,7 @@
     "repo": "cbcmlt/demo-react",
     "tech": "react",
     "hosting": "static",
-    "category": "Prototypen",
+    "category": "Diverse Tools",
     "roles": [
       "entwickler"
     ],
